@@ -1,0 +1,548 @@
+# Installing and loading of the packages
+install.packages("tm")
+install.packages("tokenizers")
+install.packages("tidyverse")
+install.packages("NLP")
+install.packages("openNLP")
+install.packages("zipfR")
+install.packages("wordcloud")
+install.packages("syuzhet")
+install.packages("stringi")
+install.packages("quanteda")
+
+library(tokenizers)
+library(tm)
+library(tidyverse)
+library(NLP)
+library(openNLP)
+library(zipfR)
+library(wordcloud)
+library(syuzhet)
+library(stringi)
+library(quanteda)
+
+
+# ###########################
+# Creating VCorpus
+chapters <- VCorpus(DirSource("./dataset", ignore.case = TRUE, mode = "text"))
+
+
+# ###########################
+# Task A
+install.packages("tokenizers")
+library(tokenizers)
+
+ten_longest_words <- function(chapter){
+  words <- c()
+  
+  tokenized <- tokenizers::tokenize_words(chapter$content)
+  
+  for (i in seq_along(tokenized)) {
+    line <- tokenized[[i]]
+      for(j in seq_along(line)){
+        words <- append(words, line[j])
+      }
+  }
+
+  unique_words <- unique(words)
+  unique_words[order(-nchar(unique_words), unique_words)][1:10]
+}
+
+ten_longest_sentences <- function(chapter){
+  sentences <- tokenizers::tokenize_sentences(paste(chapter$content, collapse=" "))[[1]]
+  
+  sentences[order(-nchar(sentences), sentences)][1:10]
+}
+
+# Words table
+chapters_task_a <- c(
+  "Chapter 1",
+  "Chapter 2",
+  "Chapter 3",
+  "Chapter 4",
+  "Chapter 5",
+  "Chapter 6",
+  "Chapter 7",
+  "Chapter 8", 
+  "Chapter 9",
+  "Chapter 10"
+)
+
+ten_longest_words_per_chapter <- data.frame(
+  "Chapters" = character(0),
+  "Word 1" = character(0),
+  "Word 2" = character(0),
+  "Word 3" = character(0),
+  "Word 4" = character(0),
+  "Word 5" = character(0),
+  "Word 6" = character(0),
+  "Word 7" = character(0),
+  "Word 8" = character(0),
+  "Word 9" = character(0),
+  "Word 10" = character(0)
+)
+
+
+for (i in seq_along(chapters)) {
+  ten_longest_words_per_chapter[nrow(ten_longest_words_per_chapter) + 1,] <- c(chapters_task_a[i], ten_longest_words(chapters[[i]]))
+}
+
+print(ten_longest_words_per_chapter)
+
+# sentences table
+ten_longest_sentences_per_chapter <- data.frame(
+  "Chapters" = character(0),
+  "Sentence 1" = character(0),
+  "Sentence 2" = character(0),
+  "Sentence 3" = character(0),
+  "Sentence 4" = character(0),
+  "Sentence 5" = character(0),
+  "Sentence 6" = character(0),
+  "Sentence 7" = character(0),
+  "Sentence 8" = character(0),
+  "Sentence 9" = character(0),
+  "Sentence 10" = character(0)
+)
+
+
+for (i in seq_along(chapters)) {
+  ten_longest_sentences_per_chapter[nrow(ten_longest_sentences_per_chapter) + 1,] <- c(chapters_task_a[i], ten_longest_sentences(chapters[[i]]))
+}
+
+print(ten_longest_sentences_per_chapter)
+
+# Another form of printing
+for (i in seq_along(chapters)) {
+  print("Chapter " + as.String(i) + ": \n")
+  print(ten_longest_sentences(chapters[[i]]))
+}
+
+# Another form of printing
+for (i in seq_along(chapters)) {
+  print("Chapter " + as.String(i) + ": \n")
+
+  for (sentence in ten_longest_sentences(chapters[[i]])) {
+    print(as.String(sentence) + "\n")
+  }
+}
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task B
+
+inspect(chapters)
+str(chapters)
+print(chapters)
+
+# Getting first chapter
+tb_chapter1 <- chapters[[1]]
+print(tb_chapter1)
+# Two identical ways to get content
+print(tb_chapter1[1])
+print(tb_chapter1$content)
+
+# DTM - Document Term Matrix
+tb_chapters_dtm <- DocumentTermMatrix(chapters)
+print(tb_chapters_dtm)
+inspect(tb_chapters_dtm)
+str(tb_chapters_dtm)
+
+# TDM - Term Document Matrix
+tb_chapters_tdm <- TermDocumentMatrix(chapters)
+print(tb_chapters_tdm)
+
+# Get a data frame of first chapter
+tb_chapters_df <- data.frame(tb_chapter1[1])
+print(tb_chapters_df)
+
+
+
+
+
+
+# Corpus Cleansing – Data Wrangling
+
+# creating function to remove numbers and punctuation
+remove_num_punct <- function(chapter) gsub("[^[:alpha:][:space:]]*", "", chapter)
+
+# Lower case the corpus
+tb_chapters_lower <- tm_map(chapters, tm::content_transformer(tolower))
+inspect(tb_chapters_lower[[1]])
+
+# Cleaning the text, removing numbers and punctuation
+tb_chapters_cleaned <- tm_map(tb_chapters_lower, content_transformer(remove_num_punct))
+inspect(chapters)
+inspect(tb_chapters_cleaned)
+
+# Remove stop words
+myStopwords <- tm::stopwords("english")
+print(myStopwords)
+
+tb_chapters_stopwords <- tm_map(tb_chapters_cleaned, tm::removeWords, myStopwords)
+inspect(tb_chapters_stopwords[[1]])
+
+# Add custom stop words and remove them
+myStopwords <- append(myStopwords, c("the", "for", "f", "if", "may", "one"))
+print(myStopwords)
+
+tb_chapters_stopwords <- tm_map(tb_chapters_cleaned, tm::removeWords, myStopwords)
+inspect(tb_chapters_stopwords[[1]])
+
+# Create TDM
+tb_chapters_stopwords_tdm <- TermDocumentMatrix(tb_chapters_stopwords)
+print(tb_chapters_stopwords_tdm)
+inspect(tb_chapters_stopwords_tdm)
+
+# Find frequent words
+tb_chapters_stopwords_tdm_freq <- findFreqTerms(tb_chapters_stopwords_tdm, 10)
+print(tb_chapters_stopwords_tdm_freq)
+
+# We can check out terms in the first chapter
+tb_chapters_1_term_freq <- termFreq(tb_chapters_stopwords[[1]])
+print(tb_chapters_1_term_freq)
+
+# Lets create a dendrogram
+tb_chapters_df <- as.data.frame(tb_chapters_stopwords_tdm[[1]])
+tb_chapters_df_dist <- dist(tb_chapters_df)
+tb_chapters_df_dist_dend <- hclust(tb_chapters_df_dist, method="ward.D2")
+str(tb_chapters_df_dist_dend)
+plot(tb_chapters_df_dist_dend)
+
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task C
+
+remove_words_accordding_word_length_and_plot_dendogram <- function(vCorpus, wordsLength) {
+  inspect(vCorpus)
+  vCorpusTDM <- TermDocumentMatrix(vCorpus)
+  deletedTerms <- vCorpusTDM$dimnames$Terms[nchar(vCorpusTDM$dimnames$Terms) <= wordsLength]
+  print("Words to be deleted: ")
+  print(length(deletedTerms))
+  print(deletedTerms[1:10])
+
+  vCorpusNew <- tm::tm_map(vCorpus, tm::removeWords, deletedTerms)
+  vCorpusNew <- tm_map(vCorpusNew, content_transformer(gsub), pattern = "  +", replacement = " ")
+  vCorpusNew <- tm::tm_map(vCorpusNew, tm::removeWords, deletedTerms)
+  vCorpusTDM <- tm::TermDocumentMatrix(vCorpusNew)
+  inspect(vCorpusNew)
+
+  vCorpus_TDM_DF <- as.data.frame(vCorpusTDM[[1]])
+  vCorpus_TDM_DF_dist <- dist(vCorpus_TDM_DF)
+  vCorpus_TDM_DF_dist_dend <- hclust(vCorpus_TDM_DF_dist, method = "ward.D2")
+  str(vCorpus_TDM_DF_dist_dend)
+  plot(vCorpus_TDM_DF_dist_dend)
+}
+
+
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 2)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 3)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 4)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 5)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 6)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 7)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 8)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 9)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 10)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 11)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 12)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 13)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 14)
+remove_words_accordding_word_length_and_plot_dendogram(tb_chapters_stopwords, 15)
+
+remove_words_accordding_sparsity_and_plot_dendogram <- function(vCorpus, sparsity) {
+  inspect(vCorpus)
+  vCorpusTDM <- tm::TermDocumentMatrix(vCorpus)
+  sparseTerms <- tm::findFreqTerms(vCorpusTDM, highfreq = sparsity)
+  print(sparseTerms[1:10])
+
+  vCorpusNew <- tm::tm_map(vCorpus, tm::removeWords, sparseTerms)
+  vCorpusNew <- tm_map(vCorpusNew, content_transformer(gsub), pattern = "  +", replacement = " ")
+  vCorpusNew <- tm::tm_map(vCorpusNew, tm::removeWords, sparseTerms)
+  vCorpusTDM <- tm::TermDocumentMatrix(vCorpusNew)
+  inspect(vCorpusNew)
+
+  vCorpus_TDM_DF <- as.data.frame(vCorpusTDM[[1]])
+  vCorpus_TDM_DF_dist <- dist(vCorpus_TDM_DF)
+  vCorpus_TDM_DF_dist_dend <- hclust(vCorpus_TDM_DF_dist, method = "ward.D2")
+  str(vCorpus_TDM_DF_dist_dend)
+  plot(vCorpus_TDM_DF_dist_dend)
+}
+
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 10)
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 20)
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 30)
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 40)
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 50)
+remove_words_accordding_sparsity_and_plot_dendogram(tb_chapters_stopwords, 60)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task D
+install.packages("NLP")
+install.packages("openNLP")
+library(NLP)
+library(openNLP)
+
+
+find_required_part_of_speech <- function(sentence, requiredType) {
+  sentence <- as.String(sentence)
+  initial_sentence_word_annotator <- NLP::annotate(sentence, list(Maxent_Sent_Token_Annotator(), Maxent_Word_Token_Annotator()))
+  pos_tag_result <- NLP::annotate(sentence, Maxent_POS_Tag_Annotator(), initial_sentence_word_annotator)
+  word_subset <- subset(pos_tag_result, type == 'word')
+  tags <- sapply(word_subset$features, '[[', "POS")
+
+  result <- data.frame(word = sentence[word_subset], pos = tags)
+  result <- result[grepl(result$pos, pattern = requiredType),]
+
+  return(result$word)
+}
+
+td_df <- data.frame(
+  chapter = character(),
+  sentence = character(),
+  nouns = character(),
+  verbs = character(),
+  stringsAsFactors=FALSE
+)
+
+for (i in 10:10) {
+  sentences <- ten_longest_sentences(chapters[[i]])
+  for (j in 1:10) {
+    sentence <- sentences[j]
+    nouns <- find_required_part_of_speech(sentence, "NN")
+    verbs <- find_required_part_of_speech(sentence, "VB")
+    verbs <- verbs[str_count(verbs) >= 5]
+    td_df[nrow(td_df) + 1,] <- c("Chapter " + as.String(i), "Sentence " + as.String(j), paste(nouns, collapse = " "), paste(verbs, collapse = " "))
+  }
+}
+
+td_df <- lapply(td_df, function(x) {
+  gsub("[^[:alnum:] ]", "", x)
+})
+
+write.csv(td_df, "td_df.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task E
+
+install.packages("zipfR")
+library(zipfR)
+
+te_chapters <- tb_chapters_stopwords
+te_chaters_tdm <- tm::TermDocumentMatrix(te_chapters)
+te_chapterTerms <- as.data.frame(te_chaters_tdm$dimnames$Terms)
+te_frequencyTable <- table(te_chapterTerms)
+# create a frequency spectrum, the most important data structure in zipfR
+te_spcTerms <- spc(te_frequencyTable)
+summary(te_spcTerms)
+
+N(te_spcTerms)
+V(te_spcTerms)
+Vm(te_spcTerms, 1)
+Vm(te_spcTerms, 1:5)
+
+plot(te_spcTerms)
+plot(te_spcTerms, log="x")
+
+# type(zm, fzm, gigp)	class of LNRE model to use
+
+# The Zipf-Mandelbrot (ZM) LNRE model
+te_zm <- lnre("zm", te_spcTerms)
+print(te_zm)
+
+# The finite Zipf-Mandelbrot (fZM) LNRE model
+te_fzm <- lnre("fzm", te_spcTerms)
+print(te_fzm)
+
+# The Generalized Inverse Gauss-Poisson (GIGP) LNRE model
+te_gigp <- lnre("gigp", te_spcTerms)
+print(te_gigp)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task f
+
+# Word Cloud
+install.packages("wordcloud")
+library(wordcloud)
+
+tf_chapters <- tb_chapters_stopwords
+tf_chapter1_tf <- termFreq(tf_chapters[[1]])
+# Get the words in the first chapter
+tf_chapter1_words <- names(tf_chapter1_tf)
+print(tf_chapter1_words)
+
+tf_pal <- brewer.pal(9, "BuGn")
+str(tf_pal)
+
+te_chapter1_wc <- wordcloud(tf_chapter1_words, tf_chapter1_tf, colors = tf_pal[-(1:4)])
+str(te_chapter1_wc)
+
+tf_pal2 <- brewer.pal(9, "Spectral")
+te_chapter1_wc <- wordcloud(tf_chapter1_words, tf_chapter1_tf, colors = tf_pal2)
+
+# Sentiment Analysis
+install.packages("syuzhet")
+library(syuzhet)
+
+tf_c1 <- get_text_as_string("dataset/ch1.txt")
+tf_c2 <- get_text_as_string("dataset/ch2.txt")
+tf_c3 <- get_text_as_string("dataset/ch3.txt")
+tf_c4 <- get_text_as_string("dataset/ch4.txt")
+tf_c5 <- get_text_as_string("dataset/ch5.txt")
+tf_c6 <- get_text_as_string("dataset/ch6.txt")
+tf_c7 <- get_text_as_string("dataset/ch7.txt")
+tf_c8 <- get_text_as_string("dataset/ch8.txt")
+tf_c9 <- get_text_as_string("dataset/ch9.txt")
+tf_c10<- get_text_as_string("dataset/ch10.txt")
+
+# Conbine all the chapters
+tf_all_chapters <- as.String(paste(tf_c1, tf_c2, tf_c3, tf_c4, tf_c5, tf_c6, tf_c7, tf_c8, tf_c9, tf_c10, sep = " "))
+print(tf_all_chapters)
+
+tf_all_sentences <- get_sentences(tf_all_chapters)
+head(tf_all_sentences)
+
+tf_sentiment_dictionary <- get_sentiment_dictionary()
+head(tf_sentiment_dictionary)
+tf_bing_dictionary <- get_sentiment_dictionary("bing")
+head(tf_bing_dictionary)
+
+tf_sent <- get_sentiment(tf_all_sentences, "syuzhet")
+print(tf_sent)
+tf_bing <- get_sentiment(tf_all_sentences, "bing")
+print(tf_bing)
+
+tf_sent_sum <- sum(tf_sent)
+print(tf_sent_sum)
+tf_bing_sum <- sum(tf_bing)
+print(tf_bing_sum)
+
+tf_sent_mean <- mean(tf_sent)
+print(tf_sent_mean)
+tf_bing_mean <- mean(tf_bing)
+print(tf_bing_mean)
+
+summary(tf_sent)
+summary(tf_bing)
+
+plot(tf_sent, main="Ten chapters Sentiment analysis with Syuzhet method", xlab="Narrative", ylab="Emotional Valence", col="red")
+plot(tf_bing, main="Ten chapters Sentiment analysis with Bing method", xlab="Narrative", ylab="Emotional Valence", col="red")
+
+# Percentage values
+tf_sent_pct10 <- get_percentage_values(tf_sent, bins = 10)
+structure(tf_sent_pct10)
+plot(tf_sent_pct10, main="Ten chapters Sentiment analysis with Syuzhet method PctValue 10 bins", xlab="Narrative", ylab="Emotional Valence", col="red")
+
+tf_sent_pct15 <- get_percentage_values(tf_sent, bins = 15)
+structure(tf_sent_pct15)
+plot(tf_sent_pct15, main="Ten chapters Sentiment analysis with Syuzhet method PctValue 15 bins", xlab="Narrative", ylab="Emotional Valence", col="red")
+
+
+tf_bing_pct10 <- get_percentage_values(tf_bing, bins = 10)
+structure(tf_bing_pct10)
+plot(tf_bing_pct10, main="Ten chapters Sentiment analysis with Bing method PctValue 10 bins", xlab="Narrative", ylab="Emotional Valence", col="red")
+
+tf_bing_pct15 <- get_percentage_values(tf_bing, bins = 15)
+structure(tf_bing_pct15)
+plot(tf_bing_pct15, main="Ten chapters Sentiment analysis with Bing method PctValue 15 bins", xlab="Narrative", ylab="Emotional Valence", col="red")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ###########################
+# Task g
+install.packages("stringi")
+install.packages("quanteda")
+library(stringi)
+library(quanteda)
+
+# For exploration of stringi package i picked second sentence of chapter 1
+tg_text <- as.String(tf_all_sentences[2])
+print(tg_text)
+# Reverses the text
+stri_reverse(tg_text)
+# Transforms the text to title case
+stri_trans_totitle(tg_text)
+# Generates random strings given length
+stri_rand_strings(5, 10)
+
+# Exploration of quanteda package
+tg_chapters_tokens <- tokens(chapters[[1]]$content, remove_punct = TRUE)
+tg_chapters_tokens_stopwords <- tokens_remove(tg_chapters_tokens, stopwords("en"))
+tg_chapters_dfm <- quanteda::dfm(tg_chapters_tokens_stopwords)
+
+# 20 most frequent words
+quanteda::topfeatures(tg_chapters_dfm, 20)
+# Remove tokens given the pattern
+quanteda::tokens_remove(tg_chapters_tokens, "new")
+# Prin frequency of features
+quanteda::featfreq(tg_chapters_dfm)

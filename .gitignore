@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+
+# Jupyter Notebooks
+**/.ipynb_checkpoints/
+
+# Node.js
+**/node_modules/
+**/npm-debug.log*
+
+# Logs
+*.log
+
+# VSCode
+.vscode/
+
+# Build artifacts
+**/dist/
+**/build/
+
+# Other
+*.sqlite3
+*.db
+*.egg-info/
+
+# Ignore generated assets and outputs
+**/assets/generated*/
+**/output/
+
+# Ignore test and coverage files
+**/coverage/
+*.cover
+*.pyc
+
+# Ignore environment files
+.env.*
+
+# Ignore package-lock and yarn lock files
+**/package-lock.json
+**/yarn.lock

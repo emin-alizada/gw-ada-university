@@ -46,3 +46,5 @@
 # Ignore package-lock and yarn lock files
 **/package-lock.json
 **/yarn.lock
+
+.idea
